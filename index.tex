@@ -1,41 +1,71 @@
 \documentclass{scrartcl}
 
 \usepackage{parskip}
-%\usepackage{fourier}
+\usepackage[hidelinks]{hyperref}
+\usepackage{booktabs}
+\usepackage{fourier}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{cite}
 
-\title{My Master Thesis}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+
+\title{Bioinformatics strategies to predict important microRNAs determining
+metastasizibility of breast cancer}
 \author{Xun Zhu}
+\date{}
 
 \begin{document}
 \maketitle
 \begin{abstract}
-  PLOS has summarized a workflow\cite{???} to identify important miRs of
-  pathways for a type of tumor, which has been proved very effective. We try to
-  apply this kind of work flow on a new set of data about breast cancer aquired
-  from TCGA. And found that it is indeed very effective. Notice that this new
-  set of data has some interesting properties. It has very limited samples, so
-  computing FDR in their original papaer becomes very no indicative. So instead
-  we use another approach, to select the important miRs based on their permuted
-  p-values.
 
-  Also, we created three kinds of measurements trying to characterize the
-  important miRs, which corresponds ot three matrices -- a binary matrix
+  PLOS has summarized a workflow\cite{plos} to identify important miRs of
+  pathways for a type of tumor, which uses GSEA\cite{subramanian2005gene} to
+  measure the importance of each pathway. We try to apply this kind of workflow
+  on a new set of data on breast cancer (aquired from TCGA). Because the number of
+  samples is very limited, which is different from the situation in \cite{plos},
+  instead of selecting miRs with high FDR, we instead selected the important miRs
+  based on their permuted p-values.
+
+  We created three kinds of measurements trying to characterize the
+  important miRs, which corresponds to three matrices -- a binary matrix
   indicating whether an pathway is the target of miR, a integer matrix
   indicating the total number of binding sites between an miR-pathway pair, and
   a real number matrix indicating the "bind score" of an miR-pathway pair.
-  These three measurements are expected to have an increasing accuracy, which
-  turns out to be the case.
-
-  Also, we compared the result (using this workflow) from two different source
-  of target predictions: one from targetScan\cite{???}, and the other from
-  miRanda\cite{???}.
+  We compared the selected important miRs from each measure and find some interesting
+  results.
 
 \end{abstract}
+
+\bigskip
+\textbf{Keywords.~~ } microRNA GSEA random-forest p-value
+
+\clearpage
+\tableofcontents
+\clearpage
 
 \section{Introduction}
 
 % Copy some intros from PLOS article, and mix in some wikipedia paragraphs.
 % Mostly about ``what is mRNA'', ``why it is important'', etc.
+MicroRNAs (miRs) are small non-coding RNAs that interact with their gene target
+coding mRNAs. Such small RNAs putatively inhibit translation by direct and
+imperfect binding to the 3'- and 5'-untranslated regions
+(UTR)\cite{bartel2004micrornas} and exert expression control with other
+regulatory elements such as transcription factors \cite{martinez2009interplay,
+shalgi2007global, wang2010transmir}.
+
+The importance of miRs in the causations of cancers has been addressed in
+various literatures including \cite{houbaviy2003embryonic, croce2009causes,
+volinia2006microrna, lu2005microrna, esquela2006oncomirs, chen2005micrornas,
+hurst2009metastamir, chan2011cancer}. An important question is how to
+computationally find the important miRs in pathways, using the sample data of
+differential expression of mRNAs, for which \cite{plos} provided a workflow
+to use various tools and sources available to approch.
+
+Here we apply this work flow to the data on the metastasis of breast cancer,
+and try to find the important miRs in three different measure.
 
 \section{Data and tools}
 
@@ -43,15 +73,94 @@
 
 \subsubsection{TCGA}
 
-% ask Sijia
+% How did we fetch the data?
+
+Using the Cancer Genome Atlas
+(TCGA\footnote{\url{http://cancergenome.nih.gov/}}), we utilized 12
+metastasized breast cancer samples along with 9 non-metastasized control
+samples that provided matching gene and miR expression profiles.
+
+% how did you determine the ``differentially expressed miRs''? By Student's
+% t-test?
 
 \subsubsection{TargetScan}
 
-% downloading, total up, rip off non-human
+TargetScan\footnote{\url{http://www.targetscan.org/}} is an online miR target
+prediction service provided by Whitehead Institute for Biomedical Research. We
+downloaded the lastest (up to Apr. 1st, 2014) version of their ``Summary
+counts''
+table\footnote{\url{http://www.targetscan.org/vert\_61/vert\_61\_data\_download/Summary\_Counts.txt.zip}},
+which contains 18209042 pairs of miRs and mRNA and the number of different
+types of binding sites. Because we only care about human mRNAs, we excluded all
+the non-human pairs and the final table contains 5806825 pairs. We counted both
+the conserved binding sites and the non-conserved binding sites.
+
+% << a snippet of final table here >>
+\begin{table}[h!]
+\centering
+\caption{A random sample of lines from the processed table of TargetScan}
+\label{tab:ts}
+\bigskip
+\begin{tabular}{lll}
+\toprule
+  mRNA Gene Symbol & miRNA name      & \# Binding Sites \\
+\midrule
+  TMEM189          & hsa-miR-3934    & 2 \\
+  PWWP2A           & hsa-miR-3646    & 1 \\
+  F2RL3            & hsa-miR-3909    & 1 \\
+  CSPG4            & hsa-miR-331-3p  & 2 \\
+  MAPK14           & hsa-miR-4459    & 1 \\
+  MYO3B            & hsa-miR-3675-5p & 1 \\
+  RREB1            & hsa-miR-205     & 1 \\
+  PGF              & hsa-miR-4691-5p & 1 \\
+  ZC3H8            & hsa-miR-512-5p  & 1 \\
+  C15orf38-AP3S2   & hsa-miR-3115    & 1 \\
+  \ldots           & \ldots          & \ldots \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsubsection{MiRanda}
 
-% downloading, ...
+MiRanda\footnote{\url{http://www.microrna.org/}} is another online miR target
+prediction service. It is provided by Memorial Sloan Kettering Cancer
+Center\footnote{\url{http://www.mskcc.org/}}. We downloaded the lastest (up to
+Apr. 1st, 2014) version of their ``Target Site
+Predictions''\footnote{\url{http://www.microrna.org/microrna/getDownloads.do}}
+with all four categories (regardless of good/bad mirSVR score,
+conserve/non-conserve). We combined the four tables and sumed up the counts.
+% why all of them???
+The total number of pairs after combining and totaling is 7333127.
+
+It's worth noting that miRanda uses both the ``-3p/-5p'' notation and the
+deprecated\footnote{The deprecation is explained in
+\url{http://www.mirbase.org/blog/2011/04/whats-in-a-name/}} ``star-notation''
+(*) to indicate minor product, for example, in Table~\ref{tab:mir}, we see that
+it uses ``hsa-miR-545*'' to indicate a minor product of hsa-mir-545. Therefore
+there are some name-wise inconsistency with targetScan.
+
+\begin{table}[h!]
+\centering
+\caption{A random sample of lines from the processed table of MiRanda}
+\label{tab:mir}
+\begin{tabular}{lll}
+\toprule
+  mRNA Gene Symbol & miRNA name     & \# Binding Sites \\
+\midrule
+  JAM3             & hsa-miR-3173   & 1 \\
+  SNPH             & hsa-miR-502-3p & 2 \\
+  FAM126A          & hsa-miR-874    & 2 \\
+  ARGFX            & hsa-miR-4280   & 1 \\
+  GNE              & hsa-miR-3153   & 1 \\
+  BEND2            & hsa-miR-2052   & 2 \\
+  ASCC1            & hsa-miR-188-5p & 3 \\
+  TSC22D2          & hsa-miR-375    & 9 \\
+  UACA             & hsa-miR-377    & 1 \\
+  TMF1             & hsa-miR-545*   & 3 \\
+  \ldots           & \ldots         & \ldots \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{R packages}
 
@@ -59,7 +168,13 @@
 
 \subsubsection{GSEA}
 
-% same thing as below
+Gene Set Enrichment Analysis (GSEA) is develop at the Broad Institute of MIT
+and Harvard.  We used the lasted version (1.0) of their R
+package\footnote{\url{http://www.broadinstitute.org/gsea/msigdb/download\_file.jsp?filePath=/resources/software/GSEA-P-R.1.0.zip}
+(might need to log in)}. We selected only the top 20 scoring gene sets for
+analysis. We used the ``C2'' version of gene set database, and used 1000 as the
+number of random permutations. The other parameters we used can be found in the
+Appendix~\ref{src:gsea}.
 
 \subsubsection{randomForest}
 
@@ -68,52 +183,521 @@
 % with those expectations
 % maybe generate a heat map?
 
+Random Forest is an R package for application of random forest algorithm. It is
+developed by Leo Breiman and Adele Cutler. We used its current version (4.6-7).
+The parameters we used can be found in the Appendix~\ref{src:rf}.
+
 \subsubsection{rfPermute}
 
-% same thing here
+RfPermute is an R package that uses the result from Random Forest package and
+compute the significance of importance by permuting the response variable. It
+is developed by Eric
+Archer\footnote{\url{http://cran.r-project.org/web/packages/rfPermute/index.html}}.
+We use this package to verify the significance of the result. From statistical
+convention, we set the cut-off to be $p<0.01$.
 
 \section{Workflow}
 
-\subsection{Do the GSEA analysis}
+Figure~\ref{fig:wf} demonstrates the slightly modified workflow from PLOS\cite{plos}.
 
-% how did you prepare all the input files, 
+\begin{figure}[h!]
+  \caption{The modified workflow to select important miRs from TCGA data}
+  \label{fig:wf}
+  \bigskip
+  \includegraphics[width=\textwidth]{{workflow}.pdf}
+\end{figure}
+
+\subsection{Performe GSEA analysis}
+
+% how did you prepare all the input files,
 % what are the running parameters
 % << figure generated by GSEA >>
 % how did you process the raw results generated
 % how did you extract the leading edge genes
 % how did you make them into a summary table
 
-\subsection{Generate the matrix of score}
+In order to feed the data into GSEA-R, we need to first process the raw tables
+downloaded from TCGA. We wrote a script to combine the two tables, create a
+corresponding list of phenotypes, and add the necessary arguments in the beginning
+of the table.
+
+GSEA-R selected 40 pathways representing the most contributing to the change of
+phenotype from 522 pathways stored in C2 database. 20 for scoring highest in
+metastasized group and another 20 for scoring lowest (highest absolute value)
+in primary group (non-metastasized control group). Table~\ref{tab:gs1} and
+Table~\ref{tab:gs2} list the names of pathways selected and their corresponding
+scores. Figure~\ref{fig:gsea} lists the heat map, p-values and other information produced by
+GSEA-R.
+
+GSEA-R also computes the leading edges genes for each pathway. Since leading
+edge genes statistically represents the most important mRNAs in a pathway.
+We proceed the following steps using only the leading edge genes in each
+pathway. This is also the approach used in \cite{plos}.
+
+\begin{table}[h!]
+\centering
+\caption{The 20 pathways in metastasized group selected by GSEA-R}
+\label{tab:gs1}
+\bigskip
+\begin{tabular}{ll}
+\toprule
+  Pathway Names                                             & Score   \\   
+\midrule
+  P53\_UP                                                   & 1.4027  \\
+  MAP00480\_Glutathione\_metabolism                         & 1.3638  \\
+  intrinsicPathway                                          & 1.283   \\
+  MAP00360\_Phenylalanine\_metabolism                       & 1.2174  \\
+  Matrix\_Metalloproteinases                                & 1.2056  \\
+  MAP00340\_Histidine\_metabolism                           & 1.195   \\
+  HOX\_LIST\_JP                                             & 1.1591  \\
+  ADULT\_LIVER\_vs\_FETAL\_LIVER\_GNF2                      & 1.1514  \\
+  electron\_transporter\_activity                           & 1.083   \\
+  no1Pathway                                                & 1.0657  \\
+  MAP00350\_Tyrosine\_metabolism                            & 1.0628  \\
+  GO\_ROS                                                   & 1.0484  \\
+  MAP00220\_Urea\_cycle\_and\_metabolism\_of\_amino\_groups & 1.0259  \\
+  FRASOR\_ER\_UP                                            & 0.95187 \\
+  ST\_Wnt\_beta\_catenin\_Pathway                           & 0.93623 \\
+  p53hypoxiaPathway                                         & 0.92514 \\
+  SIG\_CD40PATHWAYMAP                                       & 0.90249 \\
+  AR\_MOUSE\_PLUS\_TESTO\_FROM\_NETAFFX                     & 0.89128 \\
+  AR\_ORTHOS\_MAPPED\_TO\_U133\_VIA\_NETAFFX                & 0.88948 \\
+  AR\_MOUSE                                                 & 0.88948 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{The 20 pathways in primary group selected by GSEA-R}
+\label{tab:gs2}
+\bigskip
+\begin{tabular}{ll}
+\toprule
+  Pathway Names                                             & Score   \\   
+\midrule
+  shh\_lisa                                                 & -1.7159 \\
+  SA\_CASPASE\_CASCADE                                      & -1.7064 \\
+  XINACT\_MERGED                                            & -1.6725 \\
+  41bbPathway                                               & -1.6581 \\
+  tnfr1Pathway                                              & -1.6289 \\
+  MAP00252\_Alanine\_and\_aspartate\_metabolism             & -1.5879 \\
+  CR\_CELL\_CYCLE                                           & -1.5836 \\
+  Cell\_Cycle                                               & -1.5798 \\
+  CR\_REPAIR                                                & -1.5732 \\
+  fasPathway                                                & -1.573  \\
+  g2Pathway                                                 & -1.5727 \\
+  GLUCOSE\_DOWN                                             & -1.5652 \\
+  il7Pathway                                                & -1.5594 \\
+  chrebpPathway                                             & -1.5504 \\
+  il1rPathway                                               & -1.5485 \\
+  MAPK\_Cascade                                             & -1.5191 \\
+  atrbrcaPathway                                            & -1.5186 \\
+  Il12Pathway                                               & -1.5129 \\
+  mitochondriaPathway                                       & -1.5096 \\
+  ST\_Fas\_Signaling\_Pathway                               & -1.5035 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h!]
+  \centering
+  \caption{The summary of GSEA-R}
+  \label{fig:gsea}
+  \includegraphics[width=\textwidth]{{breast_cancer.global.plots}.pdf}
+\end{figure}
+
+\subsection{Post-GSEA-R processing}
+
+Before we proceed to generate the matrix of score, we need to first
+aggregate the data from the output of GSEA-R. We wrote a script to
+generate a summary table of pathways and their corresponding scores,
+along with the their corresponding leading edge genes (LEGs). A snippet
+of the summary can be found in Table~\ref{tab:legs}.
+
+\begin{table}[h!]
+\centering
+\caption{Pathways, scores and leading edge genes}
+\label{tab:legs}
+\bigskip
+\scriptsize
+\begin{tabular}{lllllll}
+\toprule
+  Pathway Name                                              & Score   & \multicolumn{4}{l}{First Few Leading Edge Genes} & \dots \\
+\midrule
+  P53\_UP                                                   & 1.4027  & NDN      & IGFBP6  & FHL2    & APLP1   & \dots \\
+  MAP00480\_Glutathione\_metabolism                         & 1.3638  & GGT1     & GPX4    & G6PD    & GSTM5   & \dots \\
+  intrinsicPathway                                          & 1.283   & F10      & PROC    & F2      & F12     & \dots \\
+  MAP00360\_Phenylalanine\_metabolism                       & 1.2174  & TAT      & ALDH3A1 & ABP1    & MAOA    & \dots \\
+  Matrix\_Metalloproteinases                                & 1.2056  & MMP17    & MMP28   & BSG     & TIMP3   & \dots \\
+  MAP00340\_Histidine\_metabolism                           & 1.195   & ALDH3A1  & ABP1    & MAOA    & AOC3    & \dots \\
+  HOX\_LIST\_JP                                             & 1.1591  & HOXB7    & HOXD1   & HOXD9   & HOXB2   & \dots \\
+  ADULT\_LIVER\_vs\_FETAL\_LIVER\_GNF2                      & 1.1514  & ADH1C    & SIGIRR  & CES2    & RARRES2 & \dots \\
+  electron\_transporter\_activity                           & 1.083   & SPR      & ETFB    & ADH1C   & BLVRA   & \dots \\
+  no1Pathway                                                & 1.0657  & FLT4     & BDKRB2  & NOS3    & CAV1    & \dots \\
+  MAP00350\_Tyrosine\_metabolism                            & 1.0628  & ADH1C    & HGD     & TAT     & ALDH3A1 & \dots \\
+  GO\_ROS                                                   & 1.0484  & CCS      & PDLIM1  & PRDX2   & MTL5    & \dots \\
+  MAP00220\_Urea\_cycle\_and\_metabolism\_of \dots          & 1.0259  & GAMT     & ARG1    & GLUD1   & OTC     & \dots \\
+  FRASOR\_ER\_UP                                            & 0.95187 & IGFBP4   & SLC39A6 & AREG    & GLRB    & \dots \\
+  ST\_Wnt\_beta\_catenin\_Pathway                           & 0.93623 & TSHB     & NKD2    & DKK4    & PIN1    & \dots \\
+  p53hypoxiaPathway                                         & 0.92514 & FHL2     & GADD45A & CPB2    & CDKN1A  & \dots \\
+  SIG\_CD40PATHWAYMAP                                       & 0.90249 & IKBKG    & MAPK11  & NFKBIL1 & MAPK3   & \dots \\
+  AR\_MOUSE\_PLUS\_TESTO\_FROM\_NETAFFX                     & 0.89128 & GPC1     & ADRA2C  & CYP3A5  & RAMP3   & \dots \\
+  AR\_ORTHOS\_MAPPED\_TO\_U133\_VIA\_NETAFFX                & 0.88948 & GPC1     & ADRA2C  & RAMP3   & CA4     & \dots \\
+  AR\_MOUSE                                                 & 0.88948 & GPC1     & ADRA2C  & RAMP3   & CA4     & \dots \\
+\midrule
+  shh\_lisa                                                 & -1.7159 & XPO1     & DYRK1A  & CDK2    & CDK8    & \dots \\
+  SA\_CASPASE\_CASCADE                                      & -1.7064 & APAF1    & GZMB    & CASP3   & DFFB    & \dots \\
+  XINACT\_MERGED                                            & -1.6725 & EIF1AX   & USP9X   & PRKX    & ATP6AP2 & \dots \\
+  41bbPathway                                               & -1.6581 & MAPK8    & TNFRSF9 & CHUK    & MAPK14  & \dots \\
+  tnfr1Pathway                                              & -1.6289 & MAP3K7   & CASP3   & MAPK8   & LMNB1   & \dots \\
+  MAP00252\_Alanine\_and\_aspartate\_metabolism             & -1.5879 & NARS     & DDX3X   & ADSL    & ADSS    & \dots \\
+  CR\_CELL\_CYCLE                                           & -1.5836 & FRK      & TTK     & SKP2    & CDK6    & \dots \\
+  Cell\_Cycle                                               & -1.5798 & SKP2     & CDK6    & HDAC2   & CHEK2   & \dots \\
+  CR\_REPAIR                                                & -1.5732 & BRCA2    & CHEK2   & PMS1    & RAD1    & \dots \\
+  fasPathway                                                & -1.573  & MAP3K7   & CASP3   & MAPK8   & LMNB1   & \dots \\
+  g2Pathway                                                 & -1.5727 & CHEK2    & EP300   & CDC25A  & ATR     & \dots \\
+  GLUCOSE\_DOWN                                             & -1.5652 & ZFR      & DEK     & KIF11   & PAPSS1  & \dots \\
+  il7Pathway                                                & -1.5594 & IL7      & JAK1    & PIK3CA  & EP300   & \dots \\
+  chrebpPathway                                             & -1.5504 & PRKAA1   & GNB1    & PRKAG2  & PRKAR2A & \dots \\
+  il1rPathway                                               & -1.5485 & MAP3K7   & MAPK8   & IL1A    & TNF     & \dots \\
+  MAPK\_Cascade                                             & -1.5191 & NRAS     & BRAF    & MAPK1   & RAF1    & \dots \\
+  atrbrcaPathway                                            & -1.5186 & FANCD2   & BRCA2   & CHEK2   & RAD1    & \dots \\
+  Il12Pathway                                               & -1.5129 & JAK2     & MAPK8   & CCR5    & MAPK14  & \dots \\
+  mitochondriaPathway                                       & -1.5096 & APAF1    & CASP3   & DFFB    & BIRC3   & \dots \\
+  ST\_Fas\_Signaling\_Pathway                               & -1.5035 & CASP8AP2 & NFAT5   & ROCK1   & CASP3   & \dots \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 % three measurements of scores !!! what is the third one???
+% ??? idea: how about the score of each pathway generated by GSEA?
 
-\subsection{Do the random forest algorithm}
+\subsection{Generate the matrix of score}
 
-% use randomForest first to get the importances
-% then use rfPermute to get the permutation p-values
-% << figure generated by rfPermute >>
-% how many do you pick, what should be the criterion?
+A matrix of score is the training data for random forest. In our case, it is a
+matrix with 40 rows (each representing a pathway selected by GSEA-R) and as
+many columns as there are miRs in the data given by the source.  Here we take
+targetScan for a example. We will be generating a $40\times1525$ matrix, which
+will be abbreviated as matrix-2.  Table~\ref{tab:mat2} demonstrates a snippet
+of the matrix generated.
 
-\subsection{Do the permutation p-value and selection}
+As a comparison, we also generate another two matrices: one with less
+information used, and one with more information used. The former is a binary
+matrix to indicate merely whether there is at least one binding site between a
+pair. A snippet of this table can be found in Table~\ref{tab:mat1}. This matrix
+will be abbreviated as matrix-1.  The latter is matrix-2 with each entry timed
+by the differential expression of corresponding miR, the data of which also
+comes from TCGA. This matrix will be abbreviated as matrix-3.  Notice we number
+the matrices according to the amount of information they used.
+
+\begin{table}[h!]
+  \centering
+  \caption{Snippet of the binary matrix (matrix-1}
+  \label{tab:mat1}
+\smallskip
+  \small
+  \begin{tabular}{lllllllllllllll}
+    \toprule
+    & \rotatebox{90}{hsa-miR-1282} & \rotatebox{90}{hsa-miR-137} & \rotatebox{90}{hsa-miR-3117-5p} & \rotatebox{90}{hsa-miR-32} & \rotatebox{90}{hsa-miR-3673} & \rotatebox{90}{hsa-miR-3976} & \rotatebox{90}{hsa-miR-4428} & \rotatebox{90}{hsa-miR-4522} & \dots \\
+    \midrule                                                   
+    P53\_UP                                          & 0            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    MAP00480\_Glutathione\_metabolism                & 0            & 0           & 0               & 0          & 1            & 0            & 1            & 1 & \dots \\
+    intrinsicPathway                                 & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 1 & \dots \\
+    MAP00360\_Phenylalanine\_metabolism              & 0            & 0           & 1               & 0          & 1            & 1            & 1            & 0 & \dots \\
+    Matrix\_Metalloproteinases                       & 0            & 0           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    MAP00340\_Histidine\_metabolism                  & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 0 & \dots \\
+    HOX\_LIST\_JP                                    & 0            & 1           & 0               & 1          & 1            & 1            & 1            & 0 & \dots \\
+    ADULT\_LIVER\_vs\_FETAL\_LIVER\_GNF2             & 0            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    electron\_transporter\_activity                  & 0            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    no1Pathway                                       & 1            & 1           & 1               & 1          & 1            & 0            & 1            & 1 & \dots \\
+    MAP00350\_Tyrosine\_metabolism                   & 0            & 1           & 1               & 0          & 1            & 1            & 0            & 0 & \dots \\
+    GO\_ROS                                          & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 0 & \dots \\
+    MAP00220\_Urea\_cycle\_and\_metabolism\_of \dots & 0            & 0           & 1               & 0          & 1            & 0            & 1            & 1 & \dots \\
+    FRASOR\_ER\_UP                                   & 1            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    ST\_Wnt\_beta\_catenin\_Pathway                  & 0            & 1           & 0               & 1          & 1            & 0            & 1            & 1 & \dots \\
+    p53hypoxiaPathway                                & 0            & 1           & 0               & 1          & 0            & 0            & 1            & 0 & \dots \\
+    SIG\_CD40PATHWAYMAP                              & 0            & 0           & 1               & 0          & 0            & 0            & 1            & 0 & \dots \\
+    AR\_MOUSE\_PLUS\_TESTO\_FROM\_NETAFFX            & 0            & 0           & 1               & 0          & 1            & 0            & 1            & 1 & \dots \\
+    AR\_ORTHOS\_MAPPED\_TO\_U133\_VIA\_NETAFFX       & 0            & 0           & 1               & 0          & 1            & 0            & 1            & 1 & \dots \\
+    AR\_MOUSE                                        & 0            & 0           & 1               & 0          & 1            & 0            & 1            & 1 & \dots \\
+    shh\_lisa                                        & 1            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    SA\_CASPASE\_CASCADE                             & 0            & 1           & 1               & 0          & 0            & 0            & 1            & 1 & \dots \\
+    XINACT\_MERGED                                   & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 1 & \dots \\
+    41bbPathway                                      & 0            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    tnfr1Pathway                                     & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 1 & \dots \\
+    MAP00252\_Alanine\_and\_aspartate\_metabolism    & 0            & 1           & 1               & 0          & 1            & 0            & 1            & 0 & \dots \\
+    CR\_CELL\_CYCLE                                  & 1            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    Cell\_Cycle                                      & 1            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    CR\_REPAIR                                       & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 1 & \dots \\
+    fasPathway                                       & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 1 & \dots \\
+    g2Pathway                                        & 1            & 0           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    GLUCOSE\_DOWN                                    & 1            & 1           & 1               & 1          & 1            & 1            & 2            & 1 & \dots \\
+    il7Pathway                                       & 0            & 1           & 0               & 1          & 0            & 1            & 1            & 1 & \dots \\
+    chrebpPathway                                    & 1            & 1           & 1               & 1          & 1            & 1            & 1            & 0 & \dots \\
+    il1rPathway                                      & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 1 & \dots \\
+    MAPK\_Cascade                                    & 1            & 1           & 1               & 1          & 1            & 1            & 1            & 1 & \dots \\
+    atrbrcaPathway                                   & 1            & 1           & 1               & 1          & 1            & 0            & 1            & 1 & \dots \\
+    Il12Pathway                                      & 0            & 1           & 0               & 0          & 0            & 1            & 1            & 1 & \dots \\
+    mitochondriaPathway                              & 0            & 1           & 1               & 0          & 1            & 1            & 1            & 1 & \dots \\
+    ST\_Fas\_Signaling\_Pathway                      & 1            & 1           & 1               & 0          & 1            & 1            & 1            & 1 & \dots \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Snippet of the generated binding site counting matrix (matrix-2)}
+\label{tab:mat2}
+\smallskip
+\small
+\begin{tabular}{lllllllllllllll}
+\toprule
+& \rotatebox{90}{hsa-miR-1282} & \rotatebox{90}{hsa-miR-137} & \rotatebox{90}{hsa-miR-3117-5p} & \rotatebox{90}{hsa-miR-32} & \rotatebox{90}{hsa-miR-3673} & \rotatebox{90}{hsa-miR-3976} & \rotatebox{90}{hsa-miR-4428} & \rotatebox{90}{hsa-miR-4522} & \dots \\
+\midrule                                                   
+P53\_UP                                          & 0            & 1           & 1               & 2          & 2            & 3            & 3            & 1 & \dots \\
+MAP00480\_Glutathione\_metabolism                & 0            & 0           & 0               & 0          & 1            & 0            & 1            & 2 & \dots \\
+intrinsicPathway                                 & 0            & 2           & 1               & 0          & 6            & 1            & 2            & 2 & \dots \\
+MAP00360\_Phenylalanine\_metabolism              & 0            & 0           & 1               & 0          & 2            & 2            & 2            & 0 & \dots \\
+Matrix\_Metalloproteinases                       & 0            & 0           & 3               & 1          & 4            & 4            & 2            & 1 & \dots \\
+MAP00340\_Histidine\_metabolism                  & 0            & 1           & 1               & 0          & 2            & 2            & 1            & 0 & \dots \\
+HOX\_LIST\_JP                                    & 0            & 1           & 0               & 3          & 3            & 2            & 2            & 0 & \dots \\
+ADULT\_LIVER\_vs\_FETAL\_LIVER\_GNF2             & 0            & 4           & 3               & 2          & 5            & 2            & 3            & 4 & \dots \\
+electron\_transporter\_activity                  & 0            & 4           & 2               & 2          & 3            & 7            & 6            & 4 & \dots \\
+no1Pathway                                       & 2            & 1           & 2               & 1          & 1            & 0            & 2            & 1 & \dots \\
+MAP00350\_Tyrosine\_metabolism                   & 0            & 1           & 1               & 0          & 2            & 2            & 0            & 0 & \dots \\
+GO\_ROS                                          & 0            & 2           & 1               & 0          & 1            & 2            & 5            & 0 & \dots \\
+MAP00220\_Urea\_cycle\_and\_metabolism\_of \dots & 0            & 0           & 1               & 0          & 1            & 0            & 2            & 1 & \dots \\
+FRASOR\_ER\_UP                                   & 1            & 3           & 4               & 1          & 2            & 2            & 7            & 2 & \dots \\
+ST\_Wnt\_beta\_catenin\_Pathway                  & 0            & 2           & 0               & 2          & 1            & 0            & 1            & 1 & \dots \\
+p53hypoxiaPathway                                & 0            & 2           & 0               & 2          & 0            & 0            & 1            & 0 & \dots \\
+SIG\_CD40PATHWAYMAP                              & 0            & 0           & 1               & 0          & 0            & 0            & 3            & 0 & \dots \\
+AR\_MOUSE\_PLUS\_TESTO\_FROM\_NETAFFX            & 0            & 0           & 3               & 0          & 1            & 0            & 2            & 1 & \dots \\
+AR\_ORTHOS\_MAPPED\_TO\_U133\_VIA\_NETAFFX       & 0            & 0           & 3               & 0          & 1            & 0            & 2            & 1 & \dots \\
+AR\_MOUSE                                        & 0            & 0           & 3               & 0          & 1            & 0            & 2            & 1 & \dots \\
+shh\_lisa                                        & 1            & 8           & 2               & 3          & 3            & 1            & 2            & 1 & \dots \\
+SA\_CASPASE\_CASCADE                             & 0            & 4           & 2               & 0          & 0            & 0            & 3            & 2 & \dots \\
+XINACT\_MERGED                                   & 0            & 4           & 1               & 0          & 13           & 3            & 5            & 4 & \dots \\
+41bbPathway                                      & 0            & 3           & 2               & 1          & 2            & 2            & 1            & 1 & \dots \\
+tnfr1Pathway                                     & 0            & 7           & 2               & 0          & 4            & 3            & 6            & 4 & \dots \\
+MAP00252\_Alanine\_and\_aspartate\_metabolism    & 0            & 2           & 2               & 0          & 1            & 0            & 2            & 0 & \dots \\
+CR\_CELL\_CYCLE                                  & 4            & 6           & 3               & 3          & 11           & 6            & 7            & 5 & \dots \\
+Cell\_Cycle                                      & 2            & 6           & 7               & 5          & 14           & 9            & 10           & 5 & \dots \\
+CR\_REPAIR                                       & 0            & 3           & 1               & 0          & 5            & 2            & 4            & 6 & \dots \\
+fasPathway                                       & 0            & 7           & 2               & 0          & 5            & 5            & 8            & 4 & \dots \\
+g2Pathway                                        & 1            & 0           & 2               & 2          & 6            & 1            & 4            & 3 & \dots \\
+GLUCOSE\_DOWN                                    & 1            & 13          & 8               & 2          & 14           & 4            & 20           & 13& \dots \\
+il7Pathway                                       & 0            & 1           & 0               & 1          & 0            & 1            & 2            & 1 & \dots \\
+chrebpPathway                                    & 2            & 4           & 1               & 1          & 1            & 1            & 1            & 0 & \dots \\
+il1rPathway                                      & 0            & 3           & 3               & 0          & 4            & 5            & 4            & 5 & \dots \\
+MAPK\_Cascade                                    & 3            & 7           & 3               & 1          & 3            & 6            & 3            & 3 & \dots \\
+atrbrcaPathway                                   & 1            & 3           & 2               & 2          & 5            & 0            & 5            & 5 & \dots \\
+Il12Pathway                                      & 0            & 3           & 0               & 0          & 0            & 1            & 2            & 1 & \dots \\
+mitochondriaPathway                              & 0            & 4           & 2               & 0          & 1            & 2            & 4            & 3 & \dots \\
+ST\_Fas\_Signaling\_Pathway                      & 1            & 6           & 3               & 0          & 7            & 2            & 8            & 3 & \dots \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\clearpage
+
+\subsection{Apply the random forest algorithm}
+
+% use randomForest first to get the importances then use rfPermute to get the
+% permutation p-values << figure generated by rfPermute >> how many do you
+% pick, what should be the criterion?
+Now we can feed the generated matrix into the random forest R package, and it
+computes an importance score for each miR, indicating the extend to which the
+presense (in the case of matrix-1) or number of binding sites (in the case of
+matrix-2) of that miR affects the score of a pathway. Since the affect can be 
+on both directions, we care about not only those with with the largest positive
+importance, but also those those with the largest negative importance.
+
+Here we feed matrix-2 as an example. A list of top and bottom 10 importance
+miRs can be found in Table~\ref{tab:imp}. As we can see from the table, the
+negative miRs has much smaller importance in terms of magnitude. Thus we
+consider not to count them as important.
+
+\begin{table}[h!]
+  \centering
+  \caption{The list of miRs with the most postive and negative importance}
+  \label{tab:imp}
+\bigskip
+  \begin{tabular}{llll}
+    \toprule
+    Positive miRs   & Importance & Negative miRs  & Importance   \\
+    \midrule
+    hsa.miR.3613.3p & 0.37676027 & hsa.miR.3188   & -0.004386791 \\
+    hsa.miR.664     & 0.25072487 & hsa.miR.613    & -0.003706353 \\
+    hsa.miR.217     & 0.19105828 & hsa.miR.374b   & -0.003467034 \\
+    hsa.miR.600     & 0.13873220 & hsa.miR.4748   & -0.003281420 \\
+    hsa.miR.203     & 0.11067679 & hsa.miR.628.5p & -0.003214184 \\
+    hsa.miR.498     & 0.09804174 & hsa.miR.761    & -0.003153555 \\
+    hsa.miR.4282    & 0.05898798 & hsa.miR.938    & -0.003113474 \\
+    hsa.miR.579     & 0.04513470 & hsa.miR.377    & -0.002981766 \\
+    hsa.miR.216b    & 0.03228265 & hsa.miR.4517   & -0.002953550 \\
+    hsa.miR.1208    & 0.02719592 & hsa.miR.3175   & -0.002895210 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Compute the permutation p-value and selection}
 
 % use the package, choose the cutoff, !!! why 0.01??? Statistical significance???
+To verify the statistical significance of the result from random forest,
+we need to compute the p-value by randomly permuting the enrichment scores and
+the matrix entries. We do this by utilizing the rfPermute R package.
+We repeated the process 100 times and constructed null-distributions of
+randomized importance scores for each miR/pathway pair. Fitting such distributions
+with a Z-test, we may calculated p-values. The miRs with the smallest p-values
+are listed in the Table~\ref{tab:pval}. Note that the p-values are close to
+each other in the table because we have very limited sample, much less than
+the number of miRs we are trying to examine, this makes so that the final p-value
+can only take a limited set of values, therefore it's not a surprise that
+the least ones take the very same value.
+
+\begin{table}[h!]
+  \centering
+  \caption{miRs with the smallest p-values}
+  \label{tab:pval}
+\bigskip
+  \begin{tabular}{llllll}
+    \toprule
+    miR             & p-value    \\
+    \midrule
+    hsa.miR.1297    & 0.00990099 \\
+    hsa.miR.1323    & 0.00990099 \\
+    hsa.miR.190     & 0.00990099 \\
+    hsa.miR.203     & 0.00990099 \\
+    hsa.miR.216b    & 0.00990099 \\
+    hsa.miR.217     & 0.00990099 \\
+    hsa.miR.3120.5p & 0.00990099 \\
+    hsa.miR.323.3p  & 0.00990099 \\
+    hsa.miR.3529    & 0.00990099 \\
+    hsa.miR.3613.3p & 0.00990099 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Result Analysis}
 
-\subsection{Comparison between the three measurements}
+% The accuracy is expected to be increasing the result ??? ask prof. what would
+% be a good way to compare the accuracy.  well, are they seem correct to her?
+We select in each measure those with the p-value $<0.01$ as the important miRs
+in pathways.  The selected list can be found in Table~\ref{tab:sel}, from which
+we may draw a venn diagram, as shown in Figure~\ref{fig:venn}
 
-% The accuracy is expected to be increasing
-% the result !!! ask prof. what would be a good way to compare the accuracy.
-% well, are they seem correct to her?
+As we can see from the venn diagram, the important miRs generated from matrix-2
+and matrix-3 have 4 overlapping miRs, while matrix-1 has only 1 overlapping with
+matrix-2 and 2 with matrix-3. However, this is expected since matrix-1 is
+binary and uses significantly less information than the other two, thus its
+results don't quite agree with those from the other two. In fact, as we can see
+there is no three way agreement among the three measures.
 
-\subsection{???}
+\begin{table}[h!]
+  \centering
+  \caption{The selected miRs by each measure}
+  \label{tab:sel}
+\bigskip
+  \begin{tabular}{lll}
+    \toprule
+    Matrix-1     & Matrix-2     & Matrix-3     \\
+    {\small(Binary)} & {\small(\#bdg. sites)} & {\small(\#bdg. sites $\times$ diff. expr.)} \\
+    \midrule
+    hsa-miR-1208 & hsa-miR-1258 & hsa-miR-1246 \\
+    hsa-miR-203  & hsa-miR-1278 & hsa-miR-1286 \\
+    hsa-miR-2116 & hsa-miR-1471 & hsa-miR-1290 \\
+    hsa-miR-217  & hsa-miR-222  & hsa-miR-1322 \\
+    hsa-miR-3163 & hsa-miR-23c  & hsa-miR-1913 \\
+    hsa-miR-3686 & hsa-miR-3713 & hsa-miR-2113 \\
+    hsa-miR-3908 & hsa-miR-376c & hsa-miR-3125 \\
+    hsa-miR-4282 & hsa-miR-4292 & hsa-miR-3143 \\
+    hsa-miR-548t & hsa-miR-4305 & hsa-miR-3148 \\
+    hsa-miR-579  & hsa-miR-4325 & hsa-miR-3658 \\
+    hsa-miR-600  & hsa-miR-549  & hsa-miR-3685 \\
+    hsa-miR-664  & hsa-miR-562  & hsa-miR-3692 \\
+    hsa-miR-944  & hsa-miR-586  & hsa-miR-4254 \\
+    hsa-miR-374c & hsa-miR-616  & hsa-miR-466  \\
+    hsa-miR-216b & hsa-miR-661  & hsa-miR-555  \\
+    hsa-miR-498  & hsa-miR-920  & hsa-miR-603  \\
+    hsa-miR-507  & hsa-miR-1323 & hsa-miR-622  \\
+    hsa-miR-548  & hsa-miR-208a & hsa-miR-670  \\
+                 & hsa-miR-374c & hsa-miR-892b \\
+                 &              & hsa-miR-938  \\
+                 &              & hsa-miR-216b \\
+                 &              & hsa-miR-498  \\
+                 &              & hsa-miR-507  \\
+                 &              & hsa-miR-548  \\
+                 &              & hsa-miR-1323 \\
+                 &              & hsa-miR-208a \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-% What are other analysis of the result? accuracy compare to clinical results?
+\begin{figure}
+\caption{The selected important miRs of the three measures}
+\label{fig:venn}
+\includegraphics[width=\textwidth]{{venn}.pdf}
+\end{figure}
+
 
 \section{Appendix}
 
-\subsection{Mathematica code}
+\subsection{Parameters used in external libraries}
 
-% mostly in data processing
+\subsubsection{GSEA-R}\label{src:gsea}
 
+Program parameters:
+
+\begin{verbatim}
+  doc.string                  = "breast_cancer",
+  non.interactive.run         = F,
+  reshuffling.type            = "sample.labels",
+  nperm                       = 1000,
+  weighted.score.type         = 1,
+  nom.p.val.threshold         = -1,
+  fwer.p.val.threshold        = -1,
+  fdr.q.val.threshold         = 0.25,
+  topgs                       = 20,
+  adjust.FDR.q.val            = F,
+  gs.size.threshold.min       = 15,
+  gs.size.threshold.max       = 500,
+  reverse.sign                = F,
+  preproc.type                = 0,
+  random.seed                 = 111,
+  perm.type                   = 0,
+  fraction                    = 1.0,
+  replace                     = F,
+  save.intermediate.results   = F,
+  OLD.GSEA                    = F,
+  use.fast.enrichment.routine = T
+\end{verbatim}
+
+Analyzer parameters:
+
+\begin{verbatim}
+  directory = "results/",
+  topgs     = 20,
+  height    = 16,
+  width     = 16
+\end{verbatim}
+
+\subsubsection{Random Forest R package}\label{src:rf}
+
+\begin{verbatim}
+  ntree       = 500
+  sampsize    = if (replace) nrow(x) else ceiling(.632*nrow(x)),
+  nodesize    = if (!is.null(y) && !is.factor(y)) 5 else 1,
+  importance  = FALSE,
+  localImp    = FALSE,
+  nPerm       = 1,
+  norm.votes  = TRUE,
+  do.trace    = FALSE,
+  keep.forest = !is.null(y) && is.null(xtest),
+  corr.bias   = FALSE,
+  keep.inbag  = FALSE
+\end{verbatim}
+
+\bibliography{mybib}{}
+\bibliographystyle{plain}
 \end{document}
